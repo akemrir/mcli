@@ -259,6 +259,21 @@ func (ctx *parsingContext) checkRequired() (err error) {
 	return
 }
 
+func (ctx *parsingContext) checkFilePathExist() (err error) {
+	checkFlags := append(clip(ctx.flags), ctx.nonflags...)
+	for _, f := range checkFlags {
+		if f.isFilename && !f.isZero() {
+			path := f.String()
+			_, pathErr := os.Stat(path)
+			if pathErr != nil {
+				ctx.failf(&err, "invalid filename %q for %s: %v", path, f.helpName(), pathErr)
+				return
+			}
+		}
+	}
+	return
+}
+
 func (ctx *parsingContext) failf(errp *error, format string, a ...interface{}) {
 	err := fmt.Errorf(format, a...)
 	if *errp == nil {
@@ -613,6 +628,9 @@ func (p *App) parseArgs(v interface{}, opts ...ParseOpt) (fs *flag.FlagSet, err 
 		return fs, err
 	}
 	if err = ctx.checkRequired(); err != nil {
+		return fs, err
+	}
+	if err = ctx.checkFilePathExist(); err != nil {
 		return fs, err
 	}
 	tidyFlagSet(fs, ctx.flags, nonflagArgs)
